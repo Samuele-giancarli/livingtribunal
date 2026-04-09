@@ -1,0 +1,158 @@
+/* CSS is how you can add style to your website, such as colors, fonts, and positioning of your
+   HTML content. To learn how to do something, just try searching Google for questions like
+   "how to change link color." */
+
+body {
+  background-color: white;
+  color: black;
+  font-family: Verdana;
+}
+
+/* Per Chrome e derivati */
+body::-webkit-scrollbar {
+  width: 6px;
+}
+body::-webkit-scrollbar-track {
+  background: #000;
+}
+body::-webkit-scrollbar-thumb {
+  background: red;
+}
+
+body {   
+        background-image: 
+        linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), /* Filtro neutro al 50% */
+        url("Tribunal.jpg"), 
+        url("main-sfondo.jpg");
+          
+        background-size: cover;
+        background-attachment: scroll;
+      
+        background-blend-mode: normal, lighten;  
+        background-position: center top;
+        background-color: #000;
+        margin: 0px;
+      }
+      
+.main-grid {
+  display: grid;
+  /* Crea 3 colonne uguali su desktop */
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 20px; /* Spazio tra i box */
+  max-width: 1000px;
+  margin: 40px auto; /* Centra la griglia nella pagina */
+  padding: 20px;
+}
+
+.grid-item {
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px); /* Effetto vetro moderno */
+  border: 2px solid red; /* Un tocco retro per richiamare h1 */
+  padding: 20px;
+  color: white;
+  text-align: center;
+  transition: transform 0.3s ease; /* Piccolo feedback al passaggio del mouse */
+}
+
+.grid-item:hover {
+  transform: scale(1.02); /* Il box si ingrandisce leggermente */
+  border-color: yellow; /* Cambia colore come la luce del Tribunale */
+}
+
+/* Gestione immagini nel box */
+.grid-item img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+
+.links-box a {
+  display: block;
+  color: red;
+  text-decoration: none;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid red;
+  font-weight: bold;
+}
+
+.links-box a:hover {
+  background-color: red;
+  color: black;
+}
+
+.banner {
+    width: 100%;
+    height: 100vh;
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.slider {
+    position: absolute;
+    width: 200px;
+    height: 250px;
+    top: 10%;
+    left: calc(50% - 100px);
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    animation: autoRun 20s linear infinite;
+    z-index: 2;
+}
+
+@keyframes autoRun {
+    from {
+        transform: perspective(1000px) rotateX(-5deg) rotateY(0deg);
+    }
+    to {
+        transform: perspective(1000px) rotateX(-5deg) rotateY(360deg);
+    }
+}
+
+.slider .item {
+    position: absolute;
+    inset: 0 0 0 0;
+    /* Formula matematica per posizionare gli item in cerchio */
+    transform: 
+        rotateY(calc((var(--position) - 1) * (360deg / var(--quantity)))) 
+        translateZ(550px);
+}
+
+.slider .item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Selettore specifico per la foto profilo */
+.profile-box img {
+  /* 1. Dimensioni: Usiamo unità quadrate per garantire il cerchio perfetto */
+  width: 120px;   /* Regola questo valore per farla più grande o più piccola */
+  height: 120px;  /* Deve essere identico a width */
+  
+  /* 2. Geometria: Il trucco per il cerchio */
+  border-radius: 50%; /* Rende i bordi curvi al 50% del raggio, creando un cerchio */
+  
+  /* 3. Gestione Contenuto: Fondamentale se la foto originale non è quadrata */
+  object-fit: cover;  /* Ritaglia e centra l'immagine dentro il cerchio senza distorcerla */
+  object-position: center; /* Assicura che il volto sia centrato nel ritaglio */
+  
+  /* 4. Estetica Modern-Retro */
+  border: 3px solid red; /* Un bordo rosso sottile per richiamare il Tribunale */
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); /* Un leggero glow rosso */
+  
+  /* Centratura nel box se necessario */
+  display: block;
+  margin: 0 auto 15px auto; /* Centra orizzontalmente e dà margine sotto */
+}
+
+.profile-box {
+  display: flex;
+  flex-direction: column; /* Impila gli elementi verticalmente */
+  align-items: center;    /* Centra tutto sull'asse orizzontale */
+  justify-content: center;
+  text-align: center;
+}
