@@ -3,17 +3,17 @@ name: Deploy to Neocities
 on:
   push:
     branches:
-      - main  # Si attiva ogni volta che carichi su questo branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4 # Versione aggiornata
 
     - name: Deploy to Neocities
-      uses: bcomnes/deploy-to-neocities@v1
+      uses: bcomnes/deploy-to-neocities@v3 # Versione aggiornata
       with:
         api_token: ${{ secrets.NEOCITIES_API_TOKEN }}
-        cleanup: false # Metti true se vuoi che i file eliminati su GitHub spariscano anche da Neocities
-        dist_dir: .    # La cartella da caricare ( '.' significa tutto il repository)
+        cleanup: false
+        dist_dir: .
