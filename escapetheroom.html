@@ -160,6 +160,11 @@
     line-height: 1.7;
     scrollbar-width: thin;
     scrollbar-color: #1a5c1a #000;
+
+      /* --- GESTIONE TESTO A CAPO --- */
+    word-wrap: break-word;       /* Rompe le parole troppo lunghe */
+    overflow-wrap: break-word;   /* Standard moderno per andare a capo */
+    white-space: pre-wrap;       /* Mantiene gli spazi ma manda a capo se finisce lo spazio */
   }
   #term-output::-webkit-scrollbar { width: 5px; }
   #term-output::-webkit-scrollbar-track { background: #000; }
