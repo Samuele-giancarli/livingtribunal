@@ -1,0 +1,47 @@
+root@matrix:~$ cock
+root@matrix:~$ marvel
+root@matrix:~$ spiderman
+root@matrix:~$ victory vitiells
+root@matrix:~$ janka
+root@matrix:~$ system
+root@matrix:~$ terminal
+root@matrix:~$ maybe
+root@matrix:~$ type here...
+root@matrix:~$ here
+root@matrix:~$ here...
+root@matrix:~$ root@matrix
+root@matrix:~$ root
+root@matrix:~$ stax pizza?
+root@matrix:~$ hint
+root@matrix:~$ !hint
+root@matrix:~$ start
+root@matrix:~$ access
+root@matrix:~$ let me in please
+root@matrix:~$ fix glasses
+root@matrix:~$ begin
+root@matrix:~$ play
+root@matrix:~$ game
+root@matrix:~$ start game
+root@matrix:~$ today
+root@matrix:~$ now
+root@matrix:~$ clock
+root@matrix:~$ game over
+root@matrix:~$ on
+root@matrix:~$ turn on
+root@matrix:~$ switch on
+root@matrix:~$ button
+root@matrix:~$ key
+root@matrix:~$ keyboard
+root@matrix:~$ unlock
+root@matrix:~$ uncock
+root@matrix:~$ password
+root@matrix:~$ user name
+root@matrix:~$ >_
+root@matrix:~$ status on
+root@matrix:~$ enter
+root@matrix:~$ login
+root@matrix:~$ O_o help
+root@matrix:~$ help
+Available commands: help, clear, cd
+root@matrix:~$ cd
+root@matrix:~$ exit
