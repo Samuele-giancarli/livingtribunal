@@ -568,7 +568,7 @@ dotGreen.addEventListener('click', () => {
   function handleCommand(cmd) {
     const c = cmd.toLowerCase();
     switch (c) {
-      case "help": writeLine('Available commands: help, clear, cd', 'line-sys', 80); break;
+      case "help": writeLine('Available commands: \ncl - cleans up the cmd \ncd - change the current directory \nexit - quits the cmd or the current open file. \nls - list directory contents \n\ntype &lt;command&gt; ? to know more', 'line-sys');
       case "clear": output.innerHTML = ''; break;
       case "exit": term.style.opacity = '0'; break;
       default:
