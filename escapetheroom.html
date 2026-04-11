@@ -84,16 +84,9 @@
 
 /* Classe per il Fullscreen */
 #terminal.fullscreen {
-  width: 100vw !important;
-  height: 100vh !important;
-  max-width: none !important;
-  top: 0 !important;
-  left: 0 !important;
-  transform: none !important;
   border-radius: 0;
   border: none;
   z-index: 9999;
-  margin: 0 !important;
 }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -117,11 +110,11 @@
   #terminal {
     display: none;
     position: absolute;
-    top: 50%;
+    /*top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: min(720px, 90%);
-    height: 480px;
+    height: 480px;*/
     background: rgba(0, 0, 0, 0.82);
     border: 1px solid #1a5c1a;
     border-radius: 4px;
@@ -293,38 +286,25 @@
   const dotGreen = document.querySelector('.dot-g');
   
   const launchBtn = document.getElementById('launch-cmd');
+  const termBar = document.getElementById('term-bar');
 
-  
+  const WIN_W = 720;
+  const WIN_H = 480;
+  const WIN_H_MIN = 40;
+
+  let termState = 'closed';
+  let winX = 0, winY = 0; // posizione corrente in px relativi a wrap
+
+  function centerWindow() {
+    winX = Math.max(0, (wrap.offsetWidth - Math.min(WIN_W, wrap.offsetWidth * 0.9)) / 2);
+    winY = Math.max(0, (wrap.offsetHeight - WIN_H) / 2);
+  }
+
 // Funzione universale per l'apertura
 function handleOpen() {
-    if (term.style.display === 'flex' && term.style.opacity === '1') return;
-
-    term.style.display = 'flex';
-    term.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    
-    const isMobile = window.innerWidth <= 600;
-
-    setTimeout(() => {
-        term.style.opacity = '1';
-        const isMobile = window.innerWidth <= 600;
-        
-        if (term.classList.contains('fullscreen')) {
-            term.style.transform = '';
-            term.style.top = '';
-            term.style.left = '';
-        } else if (isMobile) {
-            // Su mobile lasciamo che decida il CSS
-            term.style.transform = '';
-            term.style.top = '';
-            term.style.left = '';
-        } else {
-            // Su PC centriamo
-            term.style.transform = 'translate(-50%, -50%) scale(1)';
-            term.style.top = '50%';
-            term.style.left = '50%';
-        }
-        input.focus();
-    }, 10);
+    if (termState !== 'closed') return;
+    centerWindow();
+    applyState('window');
 
     if (output.innerHTML === '') {
         writeLine('Microsoft Matrix(TM) [Version 1.0.1999]', 'line-dim', 100);
@@ -342,65 +322,87 @@ launchBtn.addEventListener('touchend', (e) => {
     handleOpen();
 });
 
-
-// Stato unico: 'window' | 'fullscreen' | 'minimized-from-window' | 'minimized-from-fullscreen'
-let termState = 'window';
-
 function applyState(state) {
-  const output = document.getElementById('term-output');
   const inputRow = document.getElementById('term-input-row');
+    const isMobile = window.innerWidth <= 600;
+    const isMinimized = state.startsWith('minimized-from-');
 
-  term.style.cssText = '';
-  term.className = ''; // rimuove tutte le classi precedenti
-  term.style.display = 'flex';
+    // reset
+    term.style.cssText = '';
+    term.className = '';
 
-  const isMinimized = state.startsWith('minimized-from-');
-  output.style.display = isMinimized ? 'none' : 'block';
-  inputRow.style.display = isMinimized ? 'none' : 'flex';
+    // stili fissi sempre presenti
+    term.style.position = 'absolute';
+    term.style.background = 'rgba(0, 0, 0, 0.82)';
+    term.style.border = '1px solid #1a5c1a';
+    term.style.borderRadius = '4px';
+    term.style.boxShadow = '0 0 0 1px #0d3d0d, inset 0 0 40px rgba(0,0,0,0.8)';
+    term.style.flexDirection = 'column';
+    term.style.overflow = 'hidden';
+    term.style.opacity = '1';
+    term.style.transition = '';
 
-  if (state === 'fullscreen') {
-    term.classList.add('fullscreen');
-  } else if (isMinimized) {
-    term.classList.add('state-minimized');
-  } else {
-    term.classList.add('state-window');
+    if (state === 'closed') {
+      term.style.display = 'none';
+      termState = state;
+      return;
+    }
+
+    term.style.display = 'flex';
+    output.style.display = isMinimized ? 'none' : 'block';
+    inputRow.style.display = isMinimized ? 'none' : 'flex';
+
+    if (state === 'fullscreen') {
+      term.classList.add('fullscreen');
+      term.style.left = '0px';
+      term.style.top = '0px';
+      term.style.width = '100vw';
+      term.style.height = '100vh';
+      term.style.zIndex = '9999';
+      term.style.borderRadius = '0';
+      term.style.border = 'none';
+
+    } else if (isMobile) {
+      // su mobile: posizione fissa semplice, niente drag
+      term.style.position = 'fixed';
+      term.style.left = '4vw';
+      term.style.top = '50px';
+      term.style.width = '92vw';
+      term.style.height = isMinimized ? WIN_H_MIN + 'px' : '80vh';
+
+    } else {
+      // window o minimized su desktop
+      const w = Math.min(WIN_W, wrap.offsetWidth * 0.9);
+      term.style.left = winX + 'px';
+      term.style.top = winY + 'px';
+      term.style.width = w + 'px';
+      term.style.height = isMinimized ? WIN_H_MIN + 'px' : WIN_H + 'px';
+    }
+
+    termState = state;
+    if (!isMinimized) input.focus();
   }
-  
-  input.focus();
-
-  termState = state;
-}
 
 // ROSSO: chiude
 dotRed.addEventListener('click', () => {
+  term.style.transition = 'opacity 0.4s ease';
   term.style.opacity = '0';
-  setTimeout(() => { term.style.display = 'none'; }, 400);
+  setTimeout(() => applyState('closed'), 400);
 });
 
 // GIALLO: minimizza / ripristina
 dotYellow.addEventListener('click', () => {
-  if (termState === 'window') {
-    applyState('minimized-from-window');
-  } else if (termState === 'fullscreen') {
-    applyState('minimized-from-fullscreen');
-  } else if (termState === 'minimized-from-window') {
-    applyState('window');
-  } else if (termState === 'minimized-from-fullscreen') {
-    applyState('fullscreen');
-  }
+  if (termState === 'window')                  applyState('minimized-from-window');
+  else if (termState === 'fullscreen')         applyState('minimized-from-fullscreen');
+  else if (termState === 'minimized-from-window')     applyState('window');
+  else if (termState === 'minimized-from-fullscreen') applyState('fullscreen');
 });
 
 // VERDE: fullscreen / ripristina finestra
 dotGreen.addEventListener('click', () => {
-  if (termState === 'window') {
-    applyState('fullscreen');
-  } else if (termState === 'fullscreen') {
-    applyState('window');
-  } else if (termState === 'minimized-from-window') {
-    applyState('fullscreen'); // apre in fullscreen
-  } else if (termState === 'minimized-from-fullscreen') {
-    applyState('fullscreen'); // esce dal fullscreen
-  }
+  if (termState === 'window')                         applyState('fullscreen');
+  else if (termState === 'fullscreen')                applyState('window');
+  else if (termState.startsWith('minimized-from-'))   applyState('fullscreen');
   setTimeout(resize, 100);
 });
   
@@ -408,6 +410,58 @@ dotGreen.addEventListener('click', () => {
     // Stampiamo il messaggio di avvertimento
     writeLine(' <br> <span style="color:red; font-weight:bold;"> Uh uh... stay with me.</span> <br>', 'line-bright', 0);
   });*/
+
+  let dragging = false, dragOffX = 0, dragOffY = 0;
+
+termBar.addEventListener('mousedown', (e) => {
+  if (termState === 'fullscreen' || termState === 'closed' || window.innerWidth <= 600) return;
+  if (e.target.classList.contains('dot')) return;
+  dragging = true;
+  dragOffX = e.clientX - term.getBoundingClientRect().left;
+  dragOffY = e.clientY - term.getBoundingClientRect().top;
+  term.style.transition = 'none';
+  termBar.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+termBar.addEventListener('touchstart', (e) => {
+  if (termState === 'fullscreen' || termState === 'closed' || window.innerWidth <= 600) return;
+  if (e.target.classList.contains('dot')) return;
+  dragging = true;
+  const t = e.touches[0];
+  dragOffX = t.clientX - term.getBoundingClientRect().left;
+  dragOffY = t.clientY - term.getBoundingClientRect().top;
+  term.style.transition = 'none';
+}, { passive: true });
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const rect = wrap.getBoundingClientRect();
+  winX = e.clientX - rect.left - dragOffX;
+  winY = e.clientY - rect.top - dragOffY;
+  winX = Math.max(0, Math.min(winX, wrap.offsetWidth - term.offsetWidth));
+  winY = Math.max(0, Math.min(winY, wrap.offsetHeight - term.offsetHeight));
+  term.style.left = winX + 'px';
+  term.style.top = winY + 'px';
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (!dragging) return;
+  const t = e.touches[0];
+  const rect = wrap.getBoundingClientRect();
+  winX = t.clientX - rect.left - dragOffX;
+  winY = t.clientY - rect.top - dragOffY;
+  winX = Math.max(0, Math.min(winX, wrap.offsetWidth - term.offsetWidth));
+  winY = Math.max(0, Math.min(winY, wrap.offsetHeight - term.offsetHeight));
+  term.style.left = winX + 'px';
+  term.style.top = winY + 'px';
+}, { passive: true });
+
+document.addEventListener('mouseup', () => {
+  dragging = false;
+  termBar.style.cursor = '';
+});
+document.addEventListener('touchend', () => { dragging = false; });
 
   const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*';
 
@@ -568,9 +622,15 @@ dotGreen.addEventListener('click', () => {
   function handleCommand(cmd) {
     const c = cmd.toLowerCase();
     switch (c) {
-      case "help": writeLine('Available commands: \ncl - cleans up the cmd \ncd - change the current directory \nexit - quits the cmd or the current open file. \nls - list directory contents \n\ntype &lt;command&gt; ? to know more', 'line-sys');
-      case "clear": output.innerHTML = ''; break;
-      case "exit": term.style.opacity = '0'; break;
+      case "help":
+        writeLine('Available commands: \ncl - cleans up the cmd \ncd - change the current directory \nexit - quits the cmd or the current open file. \nls - list directory contents \n\ntype &lt;command&gt; ? to know more', 'line-sys');
+      break;
+      case "clear":
+        output.innerHTML = '';
+      break;
+      case "exit":
+        term.style.opacity = '0';
+      break;
       default:
     }
   }
