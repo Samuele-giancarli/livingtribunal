@@ -472,7 +472,7 @@ document.addEventListener('touchend', () => { dragging = false; });
 
       case 'help':
         const commands = [
-        { c: 'ls [path]', d: 'list directory contents' },
+        { c: 'ls / list [path]', d: 'list directory contents' },
         { c: 'cd &lt;path&gt;', d: 'change current directory' },
         { c: 'pwd', d: 'print working directory' },
         { c: 'cat &lt;file&gt;', d: 'read file content' },
@@ -503,6 +503,7 @@ document.addEventListener('touchend', () => { dragging = false; });
         writeLine(cwd, 'lb');
         break;
 
+      case 'list':
       case 'ls': {
         const path = resolvePath(args[0] || '');
         const node = getNode(path);
