@@ -14,8 +14,6 @@
 #terminal.state-minimized {
   position: absolute;
   width: min(720px, 90%);
-  /*top: 50%;
-  left: 50%;*/
   transform: translate(-50%, -50%);
 }
 
@@ -110,18 +108,13 @@
   #terminal {
     display: none;
     position: absolute;
-    /*top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(720px, 90%);
-    height: 480px;*/
     background: rgba(0, 0, 0, 0.82);
     border: 1px solid #1a5c1a;
     border-radius: 4px;
     box-shadow: 0 0 0 1px #0d3d0d, inset 0 0 40px rgba(0,0,0,0.8);
-    /*display: flex;*/
     flex-direction: column;
     overflow: hidden;
+    z-index: 9999;
   }
   #term-bar {
     background: #0a1a0a;
@@ -466,15 +459,35 @@ document.addEventListener('touchend', () => { dragging = false; });
   const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*';
 
   let W, H, cols, drops;
-  function resize() {
-    W = wrap.offsetWidth;
-    H = wrap.offsetHeight;
-    canvas.width = W;
-    canvas.height = H;
+ function resize() {
+  const newW = wrap.offsetWidth;
+  const newH = wrap.offsetHeight;
+  
+  // Applichiamo le dimensioni solo se sono effettivamente cambiate
+  if (canvas.width !== newW || canvas.height !== newH) {
+    canvas.width = newW;
+    canvas.height = newH;
+    W = newW;
+    H = newH;
+    
     const fontSize = 14;
-    cols = Math.floor(W / fontSize);
-    drops = new Array(cols).fill(1).map(() => Math.random() * -50);
+    const newCols = Math.floor(W / fontSize);
+
+    if (!drops) {
+      drops = new Array(newCols).fill(1).map(() => Math.random() * -50);
+    } else {
+      // Se mancano colonne, le aggiungiamo in modo fluido
+      while (drops.length < newCols) {
+        drops.push(Math.random() * -50);
+      }
+    }
+    cols = newCols;
   }
+
+  if (termState !== 'closed' && input) {
+    input.focus();
+  }
+}
   resize();
   window.addEventListener('resize', resize);
 
@@ -629,7 +642,7 @@ document.addEventListener('touchend', () => { dragging = false; });
         output.innerHTML = '';
       break;
       case "exit":
-        term.style.opacity = '0';
+        applyState('closed');
       break;
       default:
     }
