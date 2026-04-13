@@ -86,6 +86,8 @@ body{background:#000}
   const launchBtn = document.getElementById('launch-cmd');
   const termBar = document.getElementById('term-bar');
 
+  const promptLabel = document.getElementById('prompt-label');
+
   const WIN_W = 720;
   const WIN_H = 480;
   const WIN_H_MIN = 40;
@@ -321,7 +323,6 @@ document.addEventListener('touchend', () => { dragging = false; });
   }
   setInterval(drawMatrix, 40);
 
-  let typingTimer = null;
   function writeLine(text, cls, delay) {
     return new Promise(resolve => {
       setTimeout(() => {
@@ -334,6 +335,31 @@ document.addEventListener('touchend', () => { dragging = false; });
       }, delay || 0);
     });
   }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── History & Tab ────────────────────────────────────────────────
+  let hist = [], hi = -1;
+
+  function tabComplete() {
+    const parts = input.value.split(' ');
+    if (parts.length < 2) return;
+    const partial = parts[parts.length - 1];
+    const si = partial.lastIndexOf('/');
+    const dirPath = si >= 0 ? resolvePath(partial.slice(0, si || '/')) : cwd;
+    const prefix = partial.slice(si + 1);
+    const node = getNode(dirPath);
+    if (!node || node.type !== 'dir') return;
+    const matches = Object.keys(node.children).filter(k => k.startsWith(prefix));
+    if (matches.length === 1) {
+      parts[parts.length - 1] = partial.slice(0, si + 1) + matches[0];
+      input.value = parts.join(' ');
+    } else if (matches.length > 1) {
+      writeLine(matches.map(m => node.children[m].type === 'dir'
+        ? `<span class="ldir">${m}/</span>` : m).join('  '));
+    }
+  }
+
 
   async function typeLines(lines) {
     for (let i = 0; i < lines.length; i++) {
@@ -403,12 +429,14 @@ document.addEventListener('touchend', () => { dragging = false; });
 
   window.println = window.print;
 
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      const val = input.value.trim();
-      if (!val) return;
-      writeLine('<span style="color:#00aa00">root@matrix:~$</span> ' + val, 'line-user', 0);
-      input.value = '';
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp')   { e.preventDefault(); if (hi < hist.length-1) input.value = hist[++hi]; }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); hi > 0 ? input.value = hist[--hi] : (hi=-1, input.value=''); }
+    else if (e.key === 'Tab')  { e.preventDefault(); tabComplete(); }
+    else if (e.key === 'Enter') {
+      const val = input.value.trim(); if (!val) return;
+      writeLine(`<span style="color:#00aa00">${esc(promptLabel.textContent)}</span>${esc(val)}`, 'lu');
+      hist.unshift(val); hi = -1; input.value = '';
       handleCommand(val);
     }
   });
@@ -437,26 +465,221 @@ document.addEventListener('touchend', () => { dragging = false; });
     });
   }
 
-  function handleCommand(cmd) {
-    const c = cmd.toLowerCase();
-    switch (c) {
-      case "help":
-        writeLine('Available commands: \ncl - cleans up the cmd \ncd - change the current directory \nexit - quits the cmd or the current open file. \nls - list directory contents \n\ntype &lt;command&gt; ? to know more', 'line-sys');
-      break;
-      case "cl":
-      case "clear":
-        setTimeout(() => {
-          output.innerHTML = '';
-        }, 10);
-      break;
-      case "ex":
-      case "exit":
+  function handleCommand(raw) {
+    const [cmd, ...args] = raw.trim().split(/\s+/);
+
+    switch (cmd.toLowerCase()) {
+
+      case 'help':
+        const commands = [
+        { c: 'ls [path]', d: 'list directory contents' },
+        { c: 'cd &lt;path&gt;', d: 'change current directory' },
+        { c: 'pwd', d: 'print working directory' },
+        { c: 'cat &lt;file&gt;', d: 'read file content' },
+        { c: 'tree [path]', d: 'show directory structure' },
+        { c: 'mkdir &lt;name&gt;', d: 'create new directory' },
+        { c: 'touch &lt;name&gt;', d: 'create new empty file' },
+        { c: 'rm &lt;name&gt;', d: 'remove file or directory' },
+        { c: 'cl / clear', d: 'cleans up the terminal' },
+        { c: 'ex / exit', d: 'quits the terminal' }
+    ];
+
+    const helpOutput = 'Available commands:\n' + 
+        commands.map(cmd => {
+            // Dividiamo il comando dagli argomenti per colorare solo la prima parte
+            const parts = cmd.c.split(' ');
+            const mainCmd = parts[0];
+            const args = parts.slice(1).join(' ');
+            return `  <span style="color:#0f6">${mainCmd}</span> ${args} <span style="color:#555">- ${cmd.d}</span>`;
+        }).join('\n') + 
+        '\n\n  <span style="color:#00ff00; font-weight:bold;">Shortcuts:</span>' +
+        '\n  Tab = autocomplete | ↑↓ = history' +
+        '\n\n  Type <span style="color:#0f6">&lt;command&gt; ?</span> to know more';
+
+    writeLine(helpOutput, 'line-sys');
+        break;
+
+      case 'pwd':
+        writeLine(cwd, 'lb');
+        break;
+
+      case 'ls': {
+        const path = resolvePath(args[0] || '');
+        const node = getNode(path);
+        if (!node) { writeLine(`ls: ${args[0]}: no such file or directory`, 'lwarn'); break; }
+        if (node.type === 'file') { writeLine(path.split('/').pop(), 'lfile'); break; }
+        const entries = Object.entries(node.children)
+          .sort((a,b) => (a[1].type===b[1].type ? a[0].localeCompare(b[0]) : a[1].type==='dir' ? -1 : 1));
+        if (!entries.length) { writeLine('(empty)', 'ld'); break; }
+        writeLine(entries.map(([n,c]) =>
+          c.type === 'dir'
+            ? `<span class="ldir">${n}/</span>`
+            : `<span class="lfile">${n}</span><span class="ld"> ${fileSize(c.content)}</span>`
+        ).join('  '), 'ls');
+        break;
+      }
+
+      case 'cd': {
+        const target = resolvePath(args[0] || '~');
+        const node = getNode(target);
+        if (!node)                  { writeLine(`cd: ${args[0]}: no such directory`, 'lwarn'); break; }
+        if (node.type !== 'dir')    { writeLine(`cd: ${args[0]}: not a directory`, 'lwarn'); break; }
+        cwd = target; updatePrompt();
+        break;
+      }
+
+      case 'cat': {
+        if (!args[0]) { writeLine('cat: missing operand', 'lwarn'); break; }
+        const path = resolvePath(args[0]);
+        const node = getNode(path);
+        if (!node)                  { writeLine(`cat: ${args[0]}: no such file`, 'lwarn'); break; }
+        if (node.type === 'dir')    { writeLine(`cat: ${args[0]}: is a directory`, 'lwarn'); break; }
+        writeLine(esc(node.content || '(empty)'), 'ls');
+        break;
+      }
+
+      case 'tree': {
+        const path = resolvePath(args[0] || '');
+        const node = getNode(path);
+        if (!node || node.type !== 'dir') { writeLine(`tree: ${args[0] || '.'}: not a directory`, 'lwarn'); break; }
+        const lines = [`<span class="ldir">${path || '/'}</span>`];
+        function walk(n, pre) {
+          const kids = Object.entries(n.children)
+            .sort((a,b) => (a[1].type===b[1].type ? a[0].localeCompare(b[0]) : a[1].type==='dir' ? -1 : 1));
+          kids.forEach(([name, child], i) => {
+            const last = i === kids.length-1;
+            lines.push(pre + (last ? '└── ' : '├── ') + (child.type==='dir'
+              ? `<span class="ldir">${name}/</span>` : name));
+            if (child.type === 'dir') walk(child, pre + (last ? '    ' : '│   '));
+          });
+        }
+        walk(node, '');
+        writeLine(lines.join('\n'), 'ls');
+        break;
+      }
+
+      case 'mkdir': {
+        if (!args[0]) { writeLine('mkdir: missing operand', 'lwarn'); break; }
+        const target = resolvePath(args[0]);
+        const parent = getNode(target.slice(0, target.lastIndexOf('/')) || '/');
+        const name = target.split('/').pop();
+        if (!parent || parent.type !== 'dir') { writeLine(`mkdir: invalid path`, 'lwarn'); break; }
+        if (parent.children[name]) { writeLine(`mkdir: ${name}: already exists`, 'lwarn'); break; }
+        parent.children[name] = { type:'dir', children:{} };
+        writeLine(`created directory '${name}'`, 'ls');
+        break;
+      }
+
+      case 'touch': {
+        if (!args[0]) { writeLine('touch: missing operand', 'lwarn'); break; }
+        const target = resolvePath(args[0]);
+        const parent = getNode(target.slice(0, target.lastIndexOf('/')) || '/');
+        const name = target.split('/').pop();
+        if (!parent || parent.type !== 'dir') { writeLine(`touch: invalid path`, 'lwarn'); break; }
+        if (!parent.children[name]) { parent.children[name] = { type:'file', content:'' }; writeLine(`created '${name}'`, 'ls'); }
+        break;
+      }
+
+      case 'rm': {
+        if (!args[0]) { writeLine('rm: missing operand', 'lwarn'); break; }
+        const target = resolvePath(args[0]);
+        const parent = getNode(target.slice(0, target.lastIndexOf('/')) || '/');
+        const name = target.split('/').pop();
+        if (!parent || !parent.children[name]) { writeLine(`rm: ${args[0]}: no such file`, 'lwarn'); break; }
+        const node = parent.children[name];
+        if (node.type === 'dir' && Object.keys(node.children).length)
+          { writeLine(`rm: ${name}: directory not empty`, 'lwarn'); break; }
+        delete parent.children[name];
+        writeLine(`removed '${name}'`, 'ls');
+        break;
+      }
+
+      case 'cl':
+      case 'clear':
+        setTimeout(() => output.innerHTML = '', 10);
+        break;
+
+      case 'ex':
+      case 'exit':
         applyState('closed');
-      break;
+        break;
+
       default:
+        writeLine(`${esc(cmd)}: command not found`, 'le');
     }
   }
 
+  // ── Config ────────────────────────────────────────────────────────
+  const USERNAME = 'user';
+  const HOME     = '/home/' + USERNAME;
+
+  // ── Filesystem ───────────────────────────────────────────────────
+  // Each node: { type:'dir', children:{} } or { type:'file', content:'...' }
+  // Size is computed dynamically from content length.
+  const FS = { type:'dir', children:{
+    home:{ type:'dir', children:{
+      [USERNAME]:{ type:'dir', children:{
+        documents:{ type:'dir', children:{
+          'readme.txt':{ type:'file', content:'Welcome to your home directory.' },
+          'notes.md':  { type:'file', content:'# Notes\n\n- todo\n- ideas\n- plans' },
+        }},
+        downloads:{ type:'dir', children:{
+          'archive.zip':{ type:'file', content:'[binary]' },
+        }},
+        '.bashrc':{ type:'file', content:'export PATH="$PATH:/usr/local/bin"\nalias ll="ls -la"' },
+        '.ssh':{ type:'dir', children:{
+          'known_hosts':{ type:'file', content:'# SSH known hosts' },
+        }},
+      }},
+    }},
+    etc:{ type:'dir', children:{
+      'hosts':  { type:'file', content:'127.0.0.1   localhost' },
+      'passwd': { type:'file', content:`root:x:0:0::/root:/bin/bash\n${USERNAME}:x:1000:1000::${HOME}:/bin/bash` },
+    }},
+    var:{ type:'dir', children:{
+      log:{ type:'dir', children:{
+        'syslog': { type:'file', content:'[INFO] system boot ok\n[WARN] anomaly at sector 7' },
+        'auth.log':{ type:'file', content:'session opened for ' + USERNAME },
+      }},
+    }},
+    usr:{ type:'dir', children:{
+      bin:{ type:'dir', children:{
+        'sh':  { type:'file', content:'[binary]' },
+        'cat': { type:'file', content:'[binary]' },
+        'ls':  { type:'file', content:'[binary]' },
+      }},
+    }},
+    tmp:{ type:'dir', children:{} },
+  }};
+
+  // ── Path helpers ─────────────────────────────────────────────────
+  let cwd = HOME;
+
+  function resolvePath(p) {
+    if (!p || p === '') return cwd;
+    if (p === '~') return HOME;
+    if (p.startsWith('~/')) p = HOME + p.slice(1);
+    const base = p.startsWith('/') ? [] : cwd.split('/').filter(Boolean);
+    const parts = base.concat(p.split('/').filter(Boolean));
+    const r = [];
+    for (const s of parts) { if (s === '..') r.pop(); else if (s !== '.') r.push(s); }
+    return '/' + r.join('/');
+  }
+
+  function getNode(path) {
+    const parts = path.split('/').filter(Boolean);
+    let node = FS;
+    for (const p of parts) {
+      if (!node || node.type !== 'dir' || !node.children[p]) return null;
+      node = node.children[p];
+    }
+    return node;
+  }
+
+  function fileSize(content) {
+    const b = new Blob([content || '']).size;
+    return b < 1024 ? b + 'B' : b < 1048576 ? (b/1024).toFixed(1)+'K' : (b/1048576).toFixed(1)+'M';
+  }
 
   input.focus();
 })();
